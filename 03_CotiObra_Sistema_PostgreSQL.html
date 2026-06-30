@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CotiObra — Sistema de Cotizaciones</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#111;min-height:100vh;color:#f0f0f0;}
+:root{
+  --rojo:#8a0028;--rojo2:#BE013C;--rojo3:#e8336a;--rojolight:#1a0010;
+  --negro:#111;--negro2:#1a1a1a;--negro3:#222;--negro4:#2d2d2d;
+  --grisb:#333;--grisc:#888;--texto:#f0f0f0;--radio:8px;
+}
+
+/* ── LOGIN ── */
+#login-screen{position:fixed;inset:0;background:var(--negro);display:flex;align-items:center;justify-content:center;z-index:100;}
+.login-card{background:var(--negro2);border:1px solid var(--grisb);border-radius:14px;padding:40px 36px;width:380px;box-shadow:0 8px 40px rgba(192,57,43,0.18);}
+.login-card h1{font-size:26px;font-weight:700;color:var(--rojo2);margin-bottom:4px;letter-spacing:-0.5px;}
+.login-card .sub{font-size:13px;color:var(--grisc);margin-bottom:28px;}
+.login-card label{display:block;font-size:12px;font-weight:600;color:var(--grisc);margin-bottom:5px;margin-top:14px;text-transform:uppercase;letter-spacing:0.5px;}
+.login-card input,.login-card select{width:100%;padding:11px 13px;border:1px solid var(--grisb);border-radius:var(--radio);font-size:14px;outline:none;background:var(--negro3);color:var(--texto);}
+.login-card input:focus,.login-card select:focus{border-color:var(--rojo2);}
+.btn-login{width:100%;margin-top:22px;padding:12px;background:var(--rojo);color:#fff;border:none;border-radius:var(--radio);font-size:15px;cursor:pointer;font-weight:700;letter-spacing:0.3px;transition:background 0.15s;}
+.btn-login:hover{background:var(--rojo2);}
+.login-logo{display:flex;align-items:center;gap:12px;margin-bottom:6px;}
+.login-logo .ico{width:44px;height:44px;background:var(--rojo);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px;}
+.login-error{color:var(--rojo3);font-size:12px;margin-top:8px;text-align:center;display:none;font-weight:600;}
+.login-success{color:#4ade80;font-size:12px;margin-top:8px;text-align:center;display:none;background:#0a2010;padding:7px 10px;border-radius:6px;font-weight:600;}
+.btn-link{background:none;border:none;color:var(--rojo3);font-size:12px;cursor:pointer;text-decoration:underline;padding:0;font-weight:600;}
+.login-switch{text-align:center;margin-top:13px;font-size:12px;color:var(--grisc);}
+
+/* ── APP LAYOUT ── */
+#app{display:none;height:100vh;}
+#layout{display:flex;height:100%;}
+#sidebar{width:235px;background:var(--negro2);border-right:1px solid var(--grisb);display:flex;flex-direction:column;flex-shrink:0;}
+#sidebar .logo{padding:22px 18px 16px;border-bottom:1px solid var(--grisb);}
+#sidebar .logo h1{font-size:20px;font-weight:800;color:var(--rojo2);letter-spacing:-0.5px;}
+#sidebar .logo p{font-size:11px;color:var(--grisc);margin-top:3px;font-weight:500;}
+#sidebar nav{flex:1;padding:14px 0;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:12px 18px;cursor:pointer;font-size:13px;font-weight:600;color:var(--grisc);border-left:3px solid transparent;transition:all 0.15s;}
+.nav-item:hover{background:var(--negro3);color:var(--texto);}
+.nav-item.active{background:var(--rojolight);color:var(--rojo3);border-left-color:var(--rojo2);}
+.nav-item .ico{font-size:17px;width:22px;text-align:center;}
+.user-box{padding:14px 18px;border-top:1px solid var(--grisb);}
+.user-box strong{display:block;color:var(--texto);font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.user-box span{font-size:11px;color:var(--grisc);font-weight:500;}
+
+/* ── MAIN ── */
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--negro);}
+#topbar{background:var(--negro2);border-bottom:1px solid var(--grisb);padding:0 24px;height:60px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+#topbar h2{font-size:18px;font-weight:800;color:var(--texto);letter-spacing:-0.3px;}
+#content{flex:1;overflow-y:auto;padding:24px;}
+
+/* ── STAT CARDS ── */
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px;}
+.stat-card{background:var(--negro2);border-radius:var(--radio);padding:20px;border:1px solid var(--grisb);}
+.stat-card .lbl{font-size:12px;font-weight:600;color:var(--grisc);text-transform:uppercase;letter-spacing:0.5px;}
+.stat-card .val{font-size:28px;font-weight:800;color:var(--rojo2);margin-top:8px;}
+.stat-card .sub{font-size:11px;color:var(--grisc);margin-top:4px;font-weight:500;}
+
+/* ── TABLE CARD ── */
+.table-card{background:var(--negro2);border-radius:12px;border:1px solid var(--grisb);overflow:hidden;margin-bottom:20px;}
+.tc-head{padding:16px 20px;border-bottom:1px solid var(--grisb);display:flex;align-items:center;justify-content:space-between;}
+.tc-head h3{font-size:15px;font-weight:700;color:var(--texto);}
+table{width:100%;border-collapse:collapse;}
+th{background:var(--negro3);font-size:12px;font-weight:700;color:var(--grisc);padding:11px 16px;text-align:left;border-bottom:1px solid var(--grisb);text-transform:uppercase;letter-spacing:0.4px;}
+td{font-size:13px;font-weight:500;padding:11px 16px;border-bottom:1px solid #222;color:var(--texto);}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:#1c1c1c;}
+
+/* ── BADGES ── */
+.badge{display:inline-block;padding:4px 11px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:0.3px;}
+.badge-pend{background:#2a2000;color:#f0a500;}
+.badge-apro{background:#0a2010;color:#4ade80;}
+.badge-rech{background:#2a0808;color:var(--rojo3);}
+.badge-admin{background:#1a0a2a;color:#c084fc;}
+.badge-dir{background:#0a1a2a;color:#60a5fa;}
+.badge-rubro{background:#1a1010;color:var(--rojo3);border:1px solid #3a1a1a;}
+
+/* ── BUTTONS ── */
+.btn{padding:8px 14px;border-radius:var(--radio);font-size:13px;font-weight:600;cursor:pointer;border:1px solid var(--grisb);background:var(--negro3);color:var(--texto);display:inline-flex;align-items:center;gap:6px;transition:all 0.12s;}
+.btn:hover{background:var(--negro4);border-color:#555;}
+.btn-primary{background:var(--rojo);color:#fff;border-color:var(--rojo);}
+.btn-primary:hover{background:var(--rojo2);}
+.btn-sm{padding:5px 10px;font-size:12px;}
+.btn-danger{background:#2a0808;color:var(--rojo3);border-color:#5a1a1a;}
+.btn-danger:hover{background:#3a0a0a;}
+
+/* ── MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:200;display:flex;align-items:center;justify-content:center;}
+.modal{background:var(--negro2);border:1px solid var(--grisb);border-radius:12px;padding:30px 28px 24px;width:540px;max-height:88vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,0.6);}
+.modal h3{font-size:18px;font-weight:800;margin-bottom:18px;color:var(--rojo2);}
+.modal label{display:block;font-size:11px;font-weight:700;color:var(--grisc);margin-bottom:5px;margin-top:14px;text-transform:uppercase;letter-spacing:0.5px;}
+.modal input,.modal select,.modal textarea{width:100%;padding:10px 12px;border:1px solid var(--grisb);border-radius:var(--radio);font-size:13px;font-weight:500;outline:none;background:var(--negro3);color:var(--texto);}
+.modal input:focus,.modal select:focus,.modal textarea:focus{border-color:var(--rojo2);}
+.modal textarea{min-height:70px;resize:vertical;}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:22px;padding-top:16px;border-top:1px solid var(--grisb);}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.sec-div{font-size:11px;font-weight:800;color:var(--rojo2);margin-top:18px;padding-bottom:6px;border-bottom:2px solid var(--rojolight);text-transform:uppercase;letter-spacing:0.8px;}
+.det-row{display:grid;grid-template-columns:1fr 1fr 70px 80px 36px;gap:6px;align-items:center;margin-top:8px;}
+.det-row input,.det-row select{padding:7px 8px;font-size:12px;}
+.cot-total{text-align:right;margin-top:14px;font-size:14px;color:var(--grisc);padding-top:10px;border-top:1px solid var(--grisb);font-weight:600;}
+.cot-total strong{color:var(--rojo3);font-size:20px;font-weight:800;}
+
+/* ── MISC ── */
+.empty-state{text-align:center;padding:48px 20px;color:var(--grisc);}
+.loading{text-align:center;padding:32px;color:var(--grisc);font-size:13px;font-weight:600;}
+.alert{padding:12px 16px;border-radius:var(--radio);font-size:13px;font-weight:600;margin-bottom:16px;}
+.alert-warn{background:#2a1a00;color:#f0a500;border:1px solid #4a3000;}
+.alert-info{background:#0a1a2a;color:#60a5fa;border:1px solid #1a3a5a;}
+select option{background:var(--negro3);color:var(--texto);}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════ LOGIN ═══════════════════════════════════ -->
+<div id="login-screen">
+
+  <!-- PANEL INGRESAR -->
+  <div class="login-card" id="panel-login">
+    <div class="login-logo">
+      <div class="ico">🏗️</div>
+      <div>
+        <h1>CotiObra</h1>
+        <div class="sub">Sistema de Cotizaciones para Obras Educativas</div>
+      </div>
+    </div>
+    <label>Correo electrónico</label>
+    <input type="email" id="login-user" placeholder="tucorreo@gmail.com">
+    <label>Contraseña</label>
+    <input type="password" id="login-pass" placeholder="••••••••"
+           onkeydown="if(event.key==='Enter') doLogin()">
+    <div id="login-error" class="login-error">Credenciales incorrectas.</div>
+    <button class="btn-login" onclick="doLogin()">Ingresar al sistema</button>
+    <div class="login-switch">¿Eres directora y no tienes cuenta?
+      <button class="btn-link" onclick="mostrarPanelRegistro()">Crear cuenta</button>
+    </div>
+  </div>
+
+  <!-- PANEL REGISTRO DIRECTORA -->
+  <div class="login-card" id="panel-registro" style="display:none;">
+    <div class="login-logo">
+      <div class="ico">🏫</div>
+      <div>
+        <h1>Crear cuenta</h1>
+        <div class="sub">Registro de directora — acceso inmediato</div>
+      </div>
+    </div>
+    <label>Correo electrónico</label>
+    <input type="email" id="reg-correo" placeholder="tucorreo@institucion.edu.pe">
+    <label>Contraseña</label>
+    <input type="password" id="reg-pass" placeholder="Mínimo 6 caracteres">
+    <label>Institución educativa</label>
+    <select id="reg-inst"><option value="">-- Cargando... --</option></select>
+    <div id="reg-error" class="login-error"></div>
+    <div id="reg-success" class="login-success">✅ Cuenta creada. Ya puedes ingresar.</div>
+    <button class="btn-login" onclick="doRegistro()">Crear mi cuenta</button>
+    <div class="login-switch">¿Ya tienes cuenta?
+      <button class="btn-link" onclick="mostrarPanelLogin()">Ingresar</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════════ APP ═══════════════════════════════════ -->
+<div id="app">
+  <div id="layout">
+    <div id="sidebar">
+      <div class="logo">
+        <h1>🏗️ CotiObra</h1>
+        <p>Obras Educativas — Puno</p>
+      </div>
+      <nav id="sidenav">
+        <div class="nav-item active" onclick="showTab('dashboard')" data-tab="dashboard"><span class="ico">📊</span> Inicio</div>
+        <div class="nav-item" onclick="showTab('cotizaciones')" data-tab="cotizaciones"><span class="ico">📋</span> Cotizaciones</div>
+        <div class="nav-item" onclick="showTab('materiales')" data-tab="materiales"><span class="ico">📦</span> Materiales</div>
+        <div class="nav-item" onclick="showTab('proveedores')" data-tab="proveedores"><span class="ico">🚚</span> Proveedores</div>
+        <div class="nav-item" id="nav-usuarios" onclick="showTab('usuarios')" data-tab="usuarios"><span class="ico">👥</span> Usuarios</div>
+        <div class="nav-item" id="nav-instituciones" onclick="showTab('instituciones')" data-tab="instituciones"><span class="ico">🏫</span> Instituciones</div>
+      </nav>
+      <div class="user-box">
+        <strong id="sb-correo">—</strong>
+        <span id="sb-rol">—</span>
+        <br><button class="btn btn-sm btn-danger" style="margin-top:8px;width:100%;justify-content:center;" onclick="doLogout()">⬅ Cerrar sesión</button>
+      </div>
+    </div>
+
+    <div id="main">
+      <div id="topbar">
+        <h2 id="topbar-title">Inicio</h2>
+        <div style="font-size:12px;font-weight:600;color:var(--grisc);" id="topbar-fecha"></div>
+      </div>
+      <div id="content"></div>
+    </div>
+  </div>
+</div>
+
+<div id="modal-container"></div>
+
+<script>
+const API = 'http://localhost:3000/api';
+let currentUser = null;
+let cache = { materiales: [], proveedores: [], instituciones: [] };
+
+// ── FETCH HELPER ──
+async function api(path, method = 'GET', body = null) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  const res  = await fetch(API + path, opts);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Error en el servidor');
+  return data;
+}
+
+// ── SWITCH LOGIN / REGISTRO ──
+async function mostrarPanelRegistro() {
+  document.getElementById('panel-login').style.display    = 'none';
+  document.getElementById('panel-registro').style.display = 'block';
+  try {
+    const insts = await api('/instituciones');
+    const sel = document.getElementById('reg-inst');
+    sel.innerHTML = '<option value="">-- Selecciona tu institución --</option>' +
+      insts.map(i => `<option value="${i.id_institucion}">${i.nombre}</option>`).join('');
+  } catch(e) {
+    document.getElementById('reg-inst').innerHTML = '<option value="">Error al cargar</option>';
+  }
+}
+
+function mostrarPanelLogin() {
+  document.getElementById('panel-registro').style.display = 'none';
+  document.getElementById('panel-login').style.display    = 'block';
+  document.getElementById('reg-error').style.display   = 'none';
+  document.getElementById('reg-success').style.display = 'none';
+}
+
+// ── REGISTRO DIRECTORA → INSERT usuario con rol Director ──
+async function doRegistro() {
+  const correo         = document.getElementById('reg-correo').value.trim();
+  const contrasenia    = document.getElementById('reg-pass').value.trim();
+  const id_institucion = +document.getElementById('reg-inst').value || null;
+  const errEl = document.getElementById('reg-error');
+  const okEl  = document.getElementById('reg-success');
+  errEl.style.display = 'none';
+  okEl.style.display  = 'none';
+  if (!correo || !contrasenia) { errEl.textContent='Correo y contraseña requeridos.'; errEl.style.display='block'; return; }
+  if (contrasenia.length < 6)  { errEl.textContent='La contraseña debe tener al menos 6 caracteres.'; errEl.style.display='block'; return; }
+  if (!id_institucion)         { errEl.textContent='Selecciona tu institución educativa.'; errEl.style.display='block'; return; }
+  try {
+    await api('/usuarios', 'POST', { correo, contrasenia, tipo_usuario:'Director', id_institucion });
+    okEl.style.display = 'block';
+    setTimeout(() => {
+      document.getElementById('login-user').value = correo;
+      mostrarPanelLogin();
+    }, 2000);
+  } catch(err) {
+    errEl.textContent = (err.message.includes('unique') || err.message.includes('duplicate'))
+      ? 'Ya existe una cuenta con ese correo.'
+      : 'Error: ' + err.message;
+    errEl.style.display = 'block';
+  }
+}
+
+// ── LOGIN ──
+async function doLogin() {
+  const correo      = document.getElementById('login-user').value.trim();
+  const contrasenia = document.getElementById('login-pass').value.trim();
+  const errEl = document.getElementById('login-error');
+  errEl.style.display = 'none';
+  try {
+    const usuario = await api('/login', 'POST', { correo, contrasenia });
+    currentUser = usuario;
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('sb-correo').textContent = usuario.correo;
+    document.getElementById('sb-rol').textContent    = usuario.tipo_usuario;
+    document.getElementById('topbar-fecha').textContent =
+      new Date().toLocaleDateString('es-PE',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+    const esAdmin = usuario.tipo_usuario === 'Administrador';
+    document.getElementById('nav-usuarios').style.display      = esAdmin ? 'flex' : 'none';
+    document.getElementById('nav-instituciones').style.display = esAdmin ? 'flex' : 'none';
+    await cargarCache();
+    showTab('dashboard');
+  } catch(err) {
+    errEl.textContent = 'Credenciales incorrectas.';
+    errEl.style.display = 'block';
+  }
+}
+
+function doLogout() {
+  currentUser = null;
+  cache = { materiales:[], proveedores:[], instituciones:[] };
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-user').value = '';
+  document.getElementById('login-pass').value = '';
+}
+
+async function cargarCache() {
+  const [mats, provs, insts] = await Promise.all([
+    api('/materiales'), api('/proveedores'), api('/instituciones')
+  ]);
+  cache.materiales    = mats;
+  cache.proveedores   = provs;
+  cache.instituciones = insts;
+}
+
+// ── TABS ──
+function showTab(tab) {
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const el = document.querySelector(`[data-tab="${tab}"]`);
+  if (el) el.classList.add('active');
+  const titles = {dashboard:'Inicio',cotizaciones:'Cotizaciones',materiales:'Materiales',
+                  proveedores:'Proveedores',usuarios:'Usuarios',instituciones:'Instituciones'};
+  document.getElementById('topbar-title').textContent = titles[tab] || tab;
+  ({dashboard:renderDashboard, cotizaciones:renderCotizaciones, materiales:renderMateriales,
+    proveedores:renderProveedores, usuarios:renderUsuarios, instituciones:renderInstituciones})[tab]?.();
+}
+
+function estadoBadge(e){return e==='Aprobado'?'badge-apro':e==='Pendiente'?'badge-pend':'badge-rech';}
+
+// ══════════════════════════════════════════════════════
+//  DASHBOARD
+// ══════════════════════════════════════════════════════
+async function renderDashboard() {
+  document.getElementById('content').innerHTML = '<div class="loading">⏳ Cargando estadísticas...</div>';
+  try {
+    const [stats, cotizaciones, proveedores] = await Promise.all([
+      api('/dashboard'), api('/cotizaciones'), api('/proveedores')
+    ]);
+    document.getElementById('content').innerHTML = `
+      <div class="stat-grid">
+        <div class="stat-card"><div class="lbl">📋 Cotizaciones</div><div class="val">${stats.total_cotizaciones}</div><div class="sub">Registradas en el sistema</div></div>
+        <div class="stat-card"><div class="lbl">✅ Aprobadas</div><div class="val" style="color:#4ade80">${stats.aprobadas}</div><div class="sub">Confirmadas</div></div>
+        <div class="stat-card"><div class="lbl">⏳ Pendientes</div><div class="val" style="color:#f0a500">${stats.pendientes}</div><div class="sub">Por revisar</div></div>
+        <div class="stat-card"><div class="lbl">💰 Monto acumulado</div><div class="val">S/ ${Number(stats.monto_acumulado).toLocaleString('es-PE')}</div><div class="sub">Total registrado</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div class="table-card">
+          <div class="tc-head"><h3>Últimas cotizaciones</h3><button class="btn btn-sm btn-primary" onclick="showTab('cotizaciones')">Ver todas</button></div>
+          <table><thead><tr><th>Código</th><th>Rubro</th><th>Estado</th><th>Monto</th></tr></thead><tbody>
+          ${cotizaciones.slice(0,5).map(c=>`<tr>
+            <td><strong>#COT-${String(c.id_cotizacion).padStart(3,'0')}</strong></td>
+            <td><span class="badge badge-rubro">${c.rubro||'Sin rubro'}</span></td>
+            <td><span class="badge ${estadoBadge(c.estado)}">${c.estado}</span></td>
+            <td><strong>S/ ${Number(c.monto_total).toLocaleString('es-PE')}</strong></td>
+          </tr>`).join('')}
+          </tbody></table>
+        </div>
+        <div class="table-card">
+          <div class="tc-head"><h3>Proveedores</h3><button class="btn btn-sm btn-primary" onclick="showTab('proveedores')">Ver todos</button></div>
+          <table><thead><tr><th>Tienda</th><th>Teléfono</th></tr></thead><tbody>
+          ${proveedores.map(p=>`<tr><td><strong>${p.nombre_tienda}</strong></td><td>${p.telefono}</td></tr>`).join('')}
+          </tbody></table>
+        </div>
+      </div>`;
+  } catch(err) {
+    document.getElementById('content').innerHTML =
+      `<div class="alert alert-warn">❌ Error al cargar: ${err.message}</div>`;
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  COTIZACIONES
+// ══════════════════════════════════════════════════════
+async function renderCotizaciones() {
+  document.getElementById('content').innerHTML = `
+    <div class="table-card">
+      <div class="tc-head"><h3>Listado de cotizaciones</h3>
+        <button class="btn btn-primary" onclick="abrirModalCot()">+ Nueva cotización</button>
+      </div>
+      <table><thead><tr><th>Código</th><th>Fecha</th><th>Rubro</th><th>Estado</th><th>Monto total</th><th>Observaciones</th><th>Acciones</th></tr></thead>
+      <tbody id="tbody-cot"><tr><td colspan="7" class="loading">⏳ Cargando...</td></tr></tbody></table>
+    </div>`;
+  await refreshCot();
+}
+
+async function refreshCot() {
+  const tb = document.getElementById('tbody-cot'); if (!tb) return;
+  try {
+    const cotizaciones = await api('/cotizaciones');
+    if (!cotizaciones.length) {
+      tb.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--grisc)">Sin cotizaciones registradas.</td></tr>`;
+      return;
+    }
+    tb.innerHTML = cotizaciones.map(c => `<tr>
+      <td><strong>#COT-${String(c.id_cotizacion).padStart(3,'0')}</strong></td>
+      <td>${c.fecha}</td>
+      <td><span class="badge badge-rubro">${c.rubro||'Sin rubro'}</span></td>
+      <td><span class="badge ${estadoBadge(c.estado)}">${c.estado}</span></td>
+      <td><strong>S/ ${Number(c.monto_total).toLocaleString('es-PE')}</strong></td>
+      <td style="max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${c.observaciones||''}</td>
+      <td style="white-space:nowrap;">
+        <button class="btn btn-sm" onclick="verCot(${c.id_cotizacion})">👁 Ver</button>
+        ${currentUser.tipo_usuario==='Administrador'?`
+        <button class="btn btn-sm" onclick="cambiarEstadoCot(${c.id_cotizacion},'${c.estado}')">✏️</button>
+        <button class="btn btn-sm btn-danger" onclick="elimCot(${c.id_cotizacion})">🗑</button>`:''}
+      </td>
+    </tr>`).join('');
+    window._cotizaciones = cotizaciones;
+  } catch(err) {
+    tb.innerHTML = `<tr><td colspan="7"><div class="alert alert-warn">❌ ${err.message}</div></td></tr>`;
+  }
+}
+
+function abrirModalCot() {
+  window._dets = [{id_material:'',id_proveedor:'',cantidad:1,precio_unitario:0}];
+  mostrarModalCot();
+}
+
+function mostrarModalCot() {
+  const mOpts = cache.materiales.map(m=>`<option value="${m.id_material}">${m.nombre} (${m.unidad_medida})</option>`).join('');
+  const pOpts = cache.proveedores.map(p=>`<option value="${p.id_proveedor}">${p.nombre_tienda}</option>`).join('');
+  const filasHtml = window._dets.map((d,i)=>`
+    <div class="det-row">
+      <select onchange="updDet(${i},'id_material',this.value)"><option value="">Material</option>${mOpts.replace(`value="${d.id_material}"`,`value="${d.id_material}" selected`)}</select>
+      <select onchange="updDet(${i},'id_proveedor',this.value)"><option value="">Proveedor</option>${pOpts.replace(`value="${d.id_proveedor}"`,`value="${d.id_proveedor}" selected`)}</select>
+      <input type="number" min="1" value="${d.cantidad}" placeholder="Cant." onchange="updDet(${i},'cantidad',+this.value)">
+      <input type="number" min="0" step="0.01" value="${d.precio_unitario||''}" placeholder="P.Unit." onchange="updDet(${i},'precio_unitario',+this.value)">
+      <button class="btn btn-sm btn-danger" onclick="remDet(${i})">✕</button>
+    </div>`).join('');
+  const total = window._dets.reduce((a,d)=>a+(+d.cantidad||0)*(+d.precio_unitario||0),0);
+  document.getElementById('modal-container').innerHTML = `
+  <div class="modal-overlay">
+    <div class="modal">
+      <h3>📋 Nueva cotización</h3>
+      <div class="form-row">
+        <div><label>Fecha</label><input type="date" id="cf-fecha" value="${new Date().toISOString().split('T')[0]}"></div>
+        <div><label>Año fiscal</label><input type="number" id="cf-anio" value="2026"></div>
+      </div>
+      <label>Rubro de la obra</label>
+      <select id="cf-rubro" onchange="toggleRubroCustom(this.value)">
+        <option value="">-- Selecciona un rubro --</option>
+        <option value="Infraestructura">🏗️ Infraestructura</option>
+        <option value="Mobiliario">🪑 Mobiliario</option>
+        <option value="Equipamiento">🖥️ Equipamiento</option>
+        <option value="Pintura y acabados">🎨 Pintura y acabados</option>
+        <option value="Techado">🏠 Techado</option>
+        <option value="Otro">✏️ Otro (personalizado)</option>
+      </select>
+      <input type="text" id="cf-rubro-custom" placeholder="Escribe el nombre del rubro..."
+             style="display:none;margin-top:6px;">
+      <label>Estado</label>
+      <select id="cf-estado"><option>Pendiente</option><option>Aprobado</option><option>Rechazado</option></select>
+      <label>Observaciones</label>
+      <textarea id="cf-obs" placeholder="Descripción de la obra o detalles adicionales..."></textarea>
+      <div class="sec-div">Detalle de materiales</div>
+      <div style="background:var(--negro3);border:1px solid var(--grisb);border-radius:var(--radio);padding:10px;margin-top:8px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr 70px 80px 36px;gap:6px;margin-bottom:6px;">
+          <span style="font-size:11px;color:var(--grisc);font-weight:700;text-transform:uppercase;">Material</span>
+          <span style="font-size:11px;color:var(--grisc);font-weight:700;text-transform:uppercase;">Proveedor</span>
+          <span style="font-size:11px;color:var(--grisc);font-weight:700;text-transform:uppercase;">Cant.</span>
+          <span style="font-size:11px;color:var(--grisc);font-weight:700;text-transform:uppercase;">P.Unit.</span>
+          <span></span>
+        </div>
+        <div id="dets-container">${filasHtml}</div>
+        <button class="btn btn-sm" style="margin-top:8px;" onclick="addDet()">+ Agregar material</button>
+      </div>
+      <div class="cot-total">Total estimado: <strong id="cot-tv">S/ ${total.toFixed(2)}</strong></div>
+      <div class="modal-footer">
+        <button class="btn" onclick="cerrarModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="guardarCot()">💾 Guardar cotización</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+window.toggleRubroCustom = function(val) {
+  const c = document.getElementById('cf-rubro-custom');
+  c.style.display = val==='Otro' ? 'block' : 'none';
+  if (val!=='Otro') c.value='';
+};
+
+window.updDet = function(i,k,v){window._dets[i][k]=v;recalcTotal();};
+window.addDet = function(){window._dets.push({id_material:'',id_proveedor:'',cantidad:1,precio_unitario:0});mostrarModalCot();};
+window.remDet = function(i){if(window._dets.length===1)return;window._dets.splice(i,1);mostrarModalCot();};
+function recalcTotal(){
+  const t=window._dets.reduce((a,d)=>a+(+d.cantidad||0)*(+d.precio_unitario||0),0);
+  const el=document.getElementById('cot-tv');if(el)el.textContent='S/ '+t.toFixed(2);
+}
+
+// 🔑 GUARDAR COTIZACIÓN → INSERT PostgreSQL (incluye rubro)
+window.guardarCot = async function() {
+  const fecha  = document.getElementById('cf-fecha').value;
+  const anio   = +document.getElementById('cf-anio').value;
+  const estado = document.getElementById('cf-estado').value;
+  const obs    = document.getElementById('cf-obs').value;
+  const rubroSel    = document.getElementById('cf-rubro').value;
+  const rubroCustom = document.getElementById('cf-rubro-custom').value.trim();
+  const rubro = rubroSel === 'Otro' ? rubroCustom : rubroSel;
+
+  if (!fecha || !anio)  { alert('Completa fecha y año fiscal'); return; }
+  if (!rubro)           { alert('Selecciona o escribe un rubro para la cotización'); return; }
+  const dets = window._dets.filter(d=>d.id_material&&d.id_proveedor&&+d.cantidad>0);
+  if (!dets.length)     { alert('Agrega al menos un material con proveedor'); return; }
+  const monto_total = dets.reduce((a,d)=>a+(+d.cantidad||0)*(+d.precio_unitario||0),0);
+  try {
+    await api('/cotizaciones','POST',{
+      fecha, estado, rubro,
+      anio_fiscal:   anio,
+      observaciones: obs||'Sin observaciones',
+      monto_total:   +monto_total.toFixed(2),
+      id_usuario:    currentUser.id_usuario,
+      detalles: dets.map(d=>({
+        id_material:     +d.id_material,
+        id_proveedor:    +d.id_proveedor,
+        cantidad:        +d.cantidad,
+        precio_unitario: +d.precio_unitario
+      }))
+    });
+    cerrarModal();
+    await refreshCot();
+  } catch(err) { alert('Error al guardar: '+err.message); }
+};
+
+window.verCot = function(id) {
+  const c=(window._cotizaciones||[]).find(x=>x.id_cotizacion===id);
+  if(!c)return;
+  const rows=(c.detalles||[]).map(d=>`<tr>
+    <td>${d.nombre_material}</td><td>${d.unidad_medida}</td><td>${d.nombre_tienda}</td>
+    <td style="text-align:right">${d.cantidad}</td>
+    <td style="text-align:right">S/ ${Number(d.precio_unitario).toFixed(2)}</td>
+    <td style="text-align:right"><strong>S/ ${Number(d.subtotal).toFixed(2)}</strong></td>
+  </tr>`).join('');
+  document.getElementById('modal-container').innerHTML=`
+  <div class="modal-overlay"><div class="modal" style="width:620px;">
+    <h3>📋 Cotización #COT-${String(c.id_cotizacion).padStart(3,'0')}</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;background:var(--negro3);border:1px solid var(--grisb);border-radius:var(--radio);padding:14px;font-size:13px;margin-bottom:12px;">
+      <div><span style="color:var(--grisc);font-size:11px;font-weight:700;text-transform:uppercase;">Fecha</span><br><strong>${c.fecha}</strong></div>
+      <div><span style="color:var(--grisc);font-size:11px;font-weight:700;text-transform:uppercase;">Año fiscal</span><br><strong>${c.anio_fiscal}</strong></div>
+      <div><span style="color:var(--grisc);font-size:11px;font-weight:700;text-transform:uppercase;">Estado</span><br><span class="badge ${estadoBadge(c.estado)}">${c.estado}</span></div>
+      <div><span style="color:var(--grisc);font-size:11px;font-weight:700;text-transform:uppercase;">Rubro</span><br><span class="badge badge-rubro">${c.rubro||'Sin rubro'}</span></div>
+      <div style="grid-column:2/-1"><span style="color:var(--grisc);font-size:11px;font-weight:700;text-transform:uppercase;">Observaciones</span><br>${c.observaciones||'—'}</div>
+    </div>
+    <div class="sec-div">Detalle de materiales</div>
+    <table style="margin-top:10px;"><thead><tr><th>Material</th><th>Unidad</th><th>Proveedor</th><th style="text-align:right">Cant.</th><th style="text-align:right">P.Unit.</th><th style="text-align:right">Subtotal</th></tr></thead><tbody>${rows}</tbody></table>
+    <div class="cot-total" style="margin-top:10px;">Monto total: <strong>S/ ${Number(c.monto_total).toLocaleString('es-PE')}</strong></div>
+    <div class="modal-footer"><button class="btn btn-primary" onclick="cerrarModal()">Cerrar</button></div>
+  </div></div>`;
+};
+
+window.cambiarEstadoCot = async function(id,estadoActual) {
+  const s=prompt(`Estado actual: ${estadoActual}\nNuevo estado:\nPendiente / Aprobado / Rechazado`);
+  if(!s)return;
+  if(!['Pendiente','Aprobado','Rechazado'].includes(s)){alert('Estado no válido');return;}
+  try{await api(`/cotizaciones/${id}`,'PUT',{estado:s});await refreshCot();}
+  catch(err){alert('Error: '+err.message);}
+};
+
+window.elimCot = async function(id) {
+  if(!confirm('¿Eliminar esta cotización?'))return;
+  try{await api(`/cotizaciones/${id}`,'DELETE');await refreshCot();}
+  catch(err){alert('Error: '+err.message);}
+};
+
+// ══════════════════════════════════════════════════════
+//  MATERIALES
+// ══════════════════════════════════════════════════════
+async function renderMateriales() {
+  document.getElementById('content').innerHTML=`
+    <div class="table-card">
+      <div class="tc-head"><h3>Materiales de construcción</h3>
+        <button class="btn btn-primary" onclick="abrirModalMat()">+ Nuevo material</button>
+      </div>
+      <table><thead><tr><th>ID</th><th>Nombre</th><th>Categoría</th><th>Unidad</th><th>Descripción</th><th>Acciones</th></tr></thead>
+      <tbody id="tbody-mat"><tr><td colspan="6" class="loading">⏳ Cargando...</td></tr></tbody></table>
+    </div>`;
+  await refreshMat();
+}
+async function refreshMat(){
+  const tb=document.getElementById('tbody-mat');if(!tb)return;
+  try{
+    const materiales=await api('/materiales');
+    cache.materiales=materiales;
+    tb.innerHTML=materiales.map(m=>`<tr>
+      <td>${m.id_material}</td><td><strong>${m.nombre}</strong></td>
+      <td>${m.categoria}</td><td>${m.unidad_medida}</td><td>${m.descripcion||''}</td>
+      <td><button class="btn btn-sm btn-danger" onclick="elimMat(${m.id_material})">🗑 Eliminar</button></td>
+    </tr>`).join('');
+  }catch(err){tb.innerHTML=`<tr><td colspan="6"><div class="alert alert-warn">❌ ${err.message}</div></td></tr>`;}
+}
+function abrirModalMat(){
+  document.getElementById('modal-container').innerHTML=`
+  <div class="modal-overlay"><div class="modal">
+    <h3>📦 Nuevo material</h3>
+    <label>Nombre del material</label><input type="text" id="mf-nombre" placeholder="Ej: Cemento Portland">
+    <div class="form-row">
+      <div><label>Categoría</label><input type="text" id="mf-cat" placeholder="Ej: Construcción"></div>
+      <div><label>Unidad de medida</label><input type="text" id="mf-unidad" placeholder="Ej: bolsa, m³"></div>
+    </div>
+    <label>Descripción</label><input type="text" id="mf-desc" placeholder="Descripción breve">
+    <div class="modal-footer">
+      <button class="btn" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarMat()">💾 Guardar</button>
+    </div>
+  </div></div>`;
+}
+window.guardarMat=async function(){
+  const nombre=document.getElementById('mf-nombre').value.trim();
+  const categoria=document.getElementById('mf-cat').value.trim();
+  const unidad_medida=document.getElementById('mf-unidad').value.trim();
+  const descripcion=document.getElementById('mf-desc').value.trim();
+  if(!nombre||!categoria||!unidad_medida){alert('Nombre, categoría y unidad son requeridos');return;}
+  try{await api('/materiales','POST',{nombre,unidad_medida,categoria,descripcion});cerrarModal();await refreshMat();}
+  catch(err){alert('Error: '+err.message);}
+};
+window.elimMat=async function(id){
+  if(!confirm('¿Eliminar material?'))return;
+  try{await api(`/materiales/${id}`,'DELETE');await refreshMat();}
+  catch(err){alert('Error: '+err.message);}
+};
+
+// ══════════════════════════════════════════════════════
+//  PROVEEDORES
+// ══════════════════════════════════════════════════════
+async function renderProveedores(){
+  document.getElementById('content').innerHTML=`
+    <div class="table-card">
+      <div class="tc-head"><h3>Proveedores de materiales</h3>
+        <button class="btn btn-primary" onclick="abrirModalProv()">+ Nuevo proveedor</button>
+      </div>
+      <table><thead><tr><th>ID</th><th>Nombre de tienda</th><th>Teléfono</th><th>Dirección</th><th>Acciones</th></tr></thead>
+      <tbody id="tbody-prov"><tr><td colspan="5" class="loading">⏳ Cargando...</td></tr></tbody></table>
+    </div>`;
+  await refreshProv();
+}
+async function refreshProv(){
+  const tb=document.getElementById('tbody-prov');if(!tb)return;
+  try{
+    const proveedores=await api('/proveedores');
+    cache.proveedores=proveedores;
+    tb.innerHTML=proveedores.map(p=>`<tr>
+      <td>${p.id_proveedor}</td><td><strong>${p.nombre_tienda}</strong></td>
+      <td>${p.telefono}</td><td>${p.direccion}</td>
+      <td><button class="btn btn-sm btn-danger" onclick="elimProv(${p.id_proveedor})">🗑 Eliminar</button></td>
+    </tr>`).join('');
+  }catch(err){tb.innerHTML=`<tr><td colspan="5"><div class="alert alert-warn">❌ ${err.message}</div></td></tr>`;}
+}
+function abrirModalProv(){
+  document.getElementById('modal-container').innerHTML=`
+  <div class="modal-overlay"><div class="modal">
+    <h3>🚚 Nuevo proveedor</h3>
+    <label>Nombre de la tienda</label><input type="text" id="pf-nombre" placeholder="Ej: Ferretería Los Andes">
+    <div class="form-row">
+      <div><label>Teléfono</label><input type="text" id="pf-tel" placeholder="9XXXXXXXX"></div>
+      <div><label>Dirección</label><input type="text" id="pf-dir" placeholder="Av. Principal 123, Puno"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarProv()">💾 Guardar</button>
+    </div>
+  </div></div>`;
+}
+window.guardarProv=async function(){
+  const nombre_tienda=document.getElementById('pf-nombre').value.trim();
+  const telefono=document.getElementById('pf-tel').value.trim();
+  const direccion=document.getElementById('pf-dir').value.trim();
+  if(!nombre_tienda){alert('Ingresa el nombre de la tienda');return;}
+  try{await api('/proveedores','POST',{nombre_tienda,telefono,direccion});cerrarModal();await refreshProv();}
+  catch(err){alert('Error: '+err.message);}
+};
+window.elimProv=async function(id){
+  if(!confirm('¿Eliminar proveedor?'))return;
+  try{await api(`/proveedores/${id}`,'DELETE');await refreshProv();}
+  catch(err){alert('Error: '+err.message);}
+};
+
+// ══════════════════════════════════════════════════════
+//  USUARIOS
+// ══════════════════════════════════════════════════════
+async function renderUsuarios(){
+  if(currentUser.tipo_usuario!=='Administrador'){
+    document.getElementById('content').innerHTML='<div class="alert alert-warn">⚠️ Solo administradores pueden gestionar usuarios.</div>';return;
+  }
+  document.getElementById('content').innerHTML=`
+    <div class="table-card">
+      <div class="tc-head"><h3>Usuarios del sistema</h3>
+        <button class="btn btn-primary" onclick="abrirModalUsr()">+ Nuevo usuario</button>
+      </div>
+      <table><thead><tr><th>ID</th><th>Correo</th><th>Tipo</th><th>Último acceso</th><th>Institución</th><th>Acciones</th></tr></thead>
+      <tbody id="tbody-usr"><tr><td colspan="6" class="loading">⏳ Cargando...</td></tr></tbody></table>
+    </div>`;
+  await refreshUsr();
+}
+async function refreshUsr(){
+  const tb=document.getElementById('tbody-usr');if(!tb)return;
+  try{
+    const usuarios=await api('/usuarios');
+    tb.innerHTML=usuarios.map(u=>`<tr>
+      <td>${u.id_usuario}</td><td><strong>${u.correo}</strong></td>
+      <td><span class="badge ${u.tipo_usuario==='Administrador'?'badge-admin':'badge-dir'}">${u.tipo_usuario}</span></td>
+      <td>${u.ultimo_acceso||'—'}</td><td>${u.nombre_institucion||'—'}</td>
+      <td>${u.id_usuario===currentUser.id_usuario
+        ?'<span style="color:var(--grisc);font-size:12px;font-weight:600;">(tú)</span>'
+        :`<button class="btn btn-sm btn-danger" onclick="elimUsr(${u.id_usuario})">🗑</button>`}
+      </td>
+    </tr>`).join('');
+  }catch(err){tb.innerHTML=`<tr><td colspan="6"><div class="alert alert-warn">❌ ${err.message}</div></td></tr>`;}
+}
+function abrirModalUsr(){
+  const iOpts=cache.instituciones.map(i=>`<option value="${i.id_institucion}">${i.nombre}</option>`).join('');
+  document.getElementById('modal-container').innerHTML=`
+  <div class="modal-overlay"><div class="modal">
+    <h3>👤 Nuevo usuario</h3>
+    <label>Correo electrónico</label><input type="email" id="uf-correo" placeholder="nombre@institucion.edu.pe">
+    <div class="form-row">
+      <div><label>Contraseña</label><input type="password" id="uf-pass" placeholder="Contraseña"></div>
+      <div><label>Tipo de usuario</label><select id="uf-tipo"><option>Director</option><option>Administrador</option></select></div>
+    </div>
+    <label>Institución educativa</label>
+    <select id="uf-inst"><option value="">-- Seleccionar --</option>${iOpts}</select>
+    <div class="modal-footer">
+      <button class="btn" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarUsr()">💾 Guardar</button>
+    </div>
+  </div></div>`;
+}
+window.guardarUsr=async function(){
+  const correo=document.getElementById('uf-correo').value.trim();
+  const contrasenia=document.getElementById('uf-pass').value.trim();
+  const tipo_usuario=document.getElementById('uf-tipo').value;
+  const id_institucion=+document.getElementById('uf-inst').value||null;
+  if(!correo||!contrasenia){alert('Correo y contraseña son requeridos');return;}
+  try{await api('/usuarios','POST',{correo,contrasenia,tipo_usuario,id_institucion});cerrarModal();await refreshUsr();}
+  catch(err){alert('Error: '+err.message);}
+};
+window.elimUsr=async function(id){
+  if(!confirm('¿Eliminar usuario?'))return;
+  try{await api(`/usuarios/${id}`,'DELETE');await refreshUsr();}
+  catch(err){alert('Error: '+err.message);}
+};
+
+// ══════════════════════════════════════════════════════
+//  INSTITUCIONES
+// ══════════════════════════════════════════════════════
+async function renderInstituciones(){
+  if(currentUser.tipo_usuario!=='Administrador'){
+    document.getElementById('content').innerHTML='<div class="alert alert-warn">⚠️ Solo administradores pueden gestionar instituciones.</div>';return;
+  }
+  document.getElementById('content').innerHTML=`
+    <div class="table-card">
+      <div class="tc-head"><h3>Instituciones educativas</h3>
+        <button class="btn btn-primary" onclick="abrirModalInst()">+ Nueva institución</button>
+      </div>
+      <table><thead><tr><th>ID</th><th>Nombre</th><th>Dirección</th><th>Correo institucional</th><th>Acciones</th></tr></thead>
+      <tbody id="tbody-inst"><tr><td colspan="5" class="loading">⏳ Cargando...</td></tr></tbody></table>
+    </div>`;
+  await refreshInst();
+}
+async function refreshInst(){
+  const tb=document.getElementById('tbody-inst');if(!tb)return;
+  try{
+    const insts=await api('/instituciones');
+    cache.instituciones=insts;
+    tb.innerHTML=insts.map(i=>`<tr>
+      <td>${i.id_institucion}</td><td><strong>${i.nombre}</strong></td>
+      <td>${i.direccion||''}</td><td>${i.correo_institucional||''}</td>
+      <td><button class="btn btn-sm btn-danger" onclick="elimInst(${i.id_institucion})">🗑 Eliminar</button></td>
+    </tr>`).join('');
+  }catch(err){tb.innerHTML=`<tr><td colspan="5"><div class="alert alert-warn">❌ ${err.message}</div></td></tr>`;}
+}
+function abrirModalInst(){
+  document.getElementById('modal-container').innerHTML=`
+  <div class="modal-overlay"><div class="modal">
+    <h3>🏫 Nueva institución educativa</h3>
+    <label>Nombre de la institución</label><input type="text" id="if-nombre" placeholder="Ej: I.E. San Carlos">
+    <div class="form-row">
+      <div><label>Dirección</label><input type="text" id="if-dir" placeholder="Jr. Lima 123, Puno"></div>
+      <div><label>Correo institucional</label><input type="email" id="if-correo" placeholder="ie@gob.pe"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarInst()">💾 Guardar</button>
+    </div>
+  </div></div>`;
+}
+window.guardarInst=async function(){
+  const nombre=document.getElementById('if-nombre').value.trim();
+  const direccion=document.getElementById('if-dir').value.trim();
+  const correo_institucional=document.getElementById('if-correo').value.trim();
+  if(!nombre){alert('El nombre es requerido');return;}
+  try{await api('/instituciones','POST',{nombre,direccion,correo_institucional});cerrarModal();await refreshInst();}
+  catch(err){alert('Error: '+err.message);}
+};
+window.elimInst=async function(id){
+  if(!confirm('¿Eliminar institución?'))return;
+  try{await api(`/instituciones/${id}`,'DELETE');await refreshInst();}
+  catch(err){alert('Error: '+err.message);}
+};
+
+function cerrarModal(){document.getElementById('modal-container').innerHTML='';}
+window.cerrarModal=cerrarModal;
+</script>
+</body>
+</html>
