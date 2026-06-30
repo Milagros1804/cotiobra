@@ -152,6 +152,52 @@ app.get('/api/usuarios', async (req, res) => {
   }
 });
 
+// POST /api/registro-directora
+// Crea (o reutiliza) la institución por nombre, y crea el usuario Director enlazado.
+app.post('/api/registro-directora', async (req, res) => {
+  const { correo, contrasenia, nombre_institucion } = req.body;
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // 1. Buscar si la institución ya existe (sin importar mayúsculas/espacios)
+    const existente = await client.query(
+      `SELECT id_institucion FROM institucion
+       WHERE LOWER(TRIM(nombre)) = LOWER(TRIM($1))`,
+      [nombre_institucion]
+    );
+
+    let id_institucion;
+    if (existente.rows.length > 0) {
+      // Ya existe esa institución, la reutilizamos
+      id_institucion = existente.rows[0].id_institucion;
+    } else {
+      // No existe, la creamos
+      const nuevaInst = await client.query(
+        `INSERT INTO institucion (nombre) VALUES ($1) RETURNING id_institucion`,
+        [nombre_institucion]
+      );
+      id_institucion = nuevaInst.rows[0].id_institucion;
+    }
+
+    // 2. Crear el usuario Director enlazado a esa institución
+    const nuevoUsuario = await client.query(
+      `INSERT INTO usuario (correo, contrasenia, tipo_usuario, id_institucion)
+       VALUES ($1, $2, 'Director', $3)
+       RETURNING id_usuario, correo, tipo_usuario, id_institucion`,
+      [correo, contrasenia, id_institucion]
+    );
+
+    await client.query('COMMIT');
+    res.status(201).json(nuevoUsuario.rows[0]);
+  } catch (err) {
+    await client.query('ROLLBACK');
+    res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
+  }
+});
+
 // POST /api/usuarios
 app.post('/api/usuarios', async (req, res) => {
   const { correo, contrasenia, tipo_usuario, id_institucion } = req.body;
@@ -314,15 +360,25 @@ app.delete('/api/proveedores/:id', async (req, res) => {
 //  RUTAS — COTIZACIONES
 // ============================================================
 
-// GET /api/cotizaciones  (incluye sus detalles)
+// GET /api/cotizaciones?id_usuario=X&tipo_usuario=Y  (incluye sus detalles)
+// Si tipo_usuario es 'Administrador', ve todas. Si es 'Director', solo las suyas.
 app.get('/api/cotizaciones', async (req, res) => {
   try {
-    // Primero traemos todas las cotizaciones
+    const { id_usuario, tipo_usuario } = req.query;
+    const esAdmin = tipo_usuario === 'Administrador';
+
     const cotResult = await pool.query(
-      `SELECT c.*, u.correo AS correo_usuario
-       FROM cotizacion c
-       LEFT JOIN usuario u ON c.id_usuario = u.id_usuario
-       ORDER BY c.id_cotizacion DESC`
+      esAdmin
+        ? `SELECT c.*, u.correo AS correo_usuario
+           FROM cotizacion c
+           LEFT JOIN usuario u ON c.id_usuario = u.id_usuario
+           ORDER BY c.id_cotizacion DESC`
+        : `SELECT c.*, u.correo AS correo_usuario
+           FROM cotizacion c
+           LEFT JOIN usuario u ON c.id_usuario = u.id_usuario
+           WHERE c.id_usuario = $1
+           ORDER BY c.id_cotizacion DESC`,
+      esAdmin ? [] : [id_usuario]
     );
     const cotizaciones = cotResult.rows;
 

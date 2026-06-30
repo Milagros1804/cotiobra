@@ -152,7 +152,7 @@ select option{background:var(--negro3);color:var(--texto);}
     <label>Contraseña</label>
     <input type="password" id="reg-pass" placeholder="Mínimo 6 caracteres">
     <label>Institución educativa</label>
-    <select id="reg-inst"><option value="">-- Cargando... --</option></select>
+    <input type="text" id="reg-inst" placeholder="Escribe el nombre de tu institución">
     <div id="reg-error" class="login-error"></div>
     <div id="reg-success" class="login-success">✅ Cuenta creada. Ya puedes ingresar.</div>
     <button class="btn-login" onclick="doRegistro()">Crear mi cuenta</button>
@@ -199,7 +199,7 @@ select option{background:var(--negro3);color:var(--texto);}
 <div id="modal-container"></div>
 
 <script>
-const API = 'http://localhost:3000/api';
+const API = 'https://cotiobra.onrender.com/api';
 let currentUser = null;
 let cache = { materiales: [], proveedores: [], instituciones: [] };
 
@@ -214,17 +214,9 @@ async function api(path, method = 'GET', body = null) {
 }
 
 // ── SWITCH LOGIN / REGISTRO ──
-async function mostrarPanelRegistro() {
+function mostrarPanelRegistro() {
   document.getElementById('panel-login').style.display    = 'none';
   document.getElementById('panel-registro').style.display = 'block';
-  try {
-    const insts = await api('/instituciones');
-    const sel = document.getElementById('reg-inst');
-    sel.innerHTML = '<option value="">-- Selecciona tu institución --</option>' +
-      insts.map(i => `<option value="${i.id_institucion}">${i.nombre}</option>`).join('');
-  } catch(e) {
-    document.getElementById('reg-inst').innerHTML = '<option value="">Error al cargar</option>';
-  }
 }
 
 function mostrarPanelLogin() {
@@ -234,20 +226,20 @@ function mostrarPanelLogin() {
   document.getElementById('reg-success').style.display = 'none';
 }
 
-// ── REGISTRO DIRECTORA → INSERT usuario con rol Director ──
+// ── REGISTRO DIRECTORA → crea (o reutiliza) institucion + crea usuario, todo en backend ──
 async function doRegistro() {
-  const correo         = document.getElementById('reg-correo').value.trim();
-  const contrasenia    = document.getElementById('reg-pass').value.trim();
-  const id_institucion = +document.getElementById('reg-inst').value || null;
+  const correo  = document.getElementById('reg-correo').value.trim();
+  const contrasenia = document.getElementById('reg-pass').value.trim();
+  const nombre_institucion = document.getElementById('reg-inst').value.trim();
   const errEl = document.getElementById('reg-error');
   const okEl  = document.getElementById('reg-success');
   errEl.style.display = 'none';
   okEl.style.display  = 'none';
   if (!correo || !contrasenia) { errEl.textContent='Correo y contraseña requeridos.'; errEl.style.display='block'; return; }
   if (contrasenia.length < 6)  { errEl.textContent='La contraseña debe tener al menos 6 caracteres.'; errEl.style.display='block'; return; }
-  if (!id_institucion)         { errEl.textContent='Selecciona tu institución educativa.'; errEl.style.display='block'; return; }
+  if (!nombre_institucion)     { errEl.textContent='Escribe el nombre de tu institución educativa.'; errEl.style.display='block'; return; }
   try {
-    await api('/usuarios', 'POST', { correo, contrasenia, tipo_usuario:'Director', id_institucion });
+    await api('/registro-directora', 'POST', { correo, contrasenia, nombre_institucion });
     okEl.style.display = 'block';
     setTimeout(() => {
       document.getElementById('login-user').value = correo;
@@ -319,6 +311,11 @@ function showTab(tab) {
 
 function estadoBadge(e){return e==='Aprobado'?'badge-apro':e==='Pendiente'?'badge-pend':'badge-rech';}
 
+// Construye el query string para filtrar cotizaciones según el rol del usuario logueado
+function cotQuery() {
+  return `/cotizaciones?id_usuario=${currentUser.id_usuario}&tipo_usuario=${encodeURIComponent(currentUser.tipo_usuario)}`;
+}
+
 // ══════════════════════════════════════════════════════
 //  DASHBOARD
 // ══════════════════════════════════════════════════════
@@ -326,7 +323,7 @@ async function renderDashboard() {
   document.getElementById('content').innerHTML = '<div class="loading">⏳ Cargando estadísticas...</div>';
   try {
     const [stats, cotizaciones, proveedores] = await Promise.all([
-      api('/dashboard'), api('/cotizaciones'), api('/proveedores')
+      api('/dashboard'), api(cotQuery()), api('/proveedores')
     ]);
     document.getElementById('content').innerHTML = `
       <div class="stat-grid">
@@ -378,7 +375,7 @@ async function renderCotizaciones() {
 async function refreshCot() {
   const tb = document.getElementById('tbody-cot'); if (!tb) return;
   try {
-    const cotizaciones = await api('/cotizaciones');
+    const cotizaciones = await api(cotQuery());
     if (!cotizaciones.length) {
       tb.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--grisc)">Sin cotizaciones registradas.</td></tr>`;
       return;
