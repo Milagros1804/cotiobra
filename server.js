@@ -467,18 +467,31 @@ app.delete('/api/cotizaciones/:id', async (req, res) => {
 //  RUTA — DASHBOARD (estadísticas resumen)
 // ============================================================
 
-// GET /api/dashboard
+// GET /api/dashboard?id_usuario=X&tipo_usuario=Y
+// Administrador ve estadisticas globales. Director solo ve las suyas.
 app.get('/api/dashboard', async (req, res) => {
   try {
-    const result = await pool.query(`
-      SELECT
-        COUNT(*)                                          AS total_cotizaciones,
-        COUNT(*) FILTER (WHERE estado = 'Aprobado')      AS aprobadas,
-        COUNT(*) FILTER (WHERE estado = 'Pendiente')     AS pendientes,
-        COUNT(*) FILTER (WHERE estado = 'Rechazado')     AS rechazadas,
-        COALESCE(SUM(monto_total), 0)                    AS monto_acumulado
-      FROM cotizacion
-    `);
+    const { id_usuario, tipo_usuario } = req.query;
+    const esAdmin = tipo_usuario === 'Administrador';
+
+    const result = await pool.query(
+      esAdmin
+        ? `SELECT
+             COUNT(*)                                      AS total_cotizaciones,
+             COUNT(*) FILTER (WHERE estado = 'Aprobado')  AS aprobadas,
+             COUNT(*) FILTER (WHERE estado = 'Pendiente') AS pendientes,
+             COUNT(*) FILTER (WHERE estado = 'Rechazado') AS rechazadas,
+             COALESCE(SUM(monto_total), 0)                AS monto_acumulado
+           FROM cotizacion`
+        : `SELECT
+             COUNT(*)                                      AS total_cotizaciones,
+             COUNT(*) FILTER (WHERE estado = 'Aprobado')  AS aprobadas,
+             COUNT(*) FILTER (WHERE estado = 'Pendiente') AS pendientes,
+             COUNT(*) FILTER (WHERE estado = 'Rechazado') AS rechazadas,
+             COALESCE(SUM(monto_total), 0)                AS monto_acumulado
+           FROM cotizacion WHERE id_usuario = $1`,
+      esAdmin ? [] : [id_usuario]
+    );
     res.json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });

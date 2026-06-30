@@ -323,7 +323,8 @@ async function renderDashboard() {
   document.getElementById('content').innerHTML = '<div class="loading">⏳ Cargando estadísticas...</div>';
   try {
     const [stats, cotizaciones, proveedores] = await Promise.all([
-      api('/dashboard'), api(cotQuery()), api('/proveedores')
+      api(`/dashboard?id_usuario=${currentUser.id_usuario}&tipo_usuario=${encodeURIComponent(currentUser.tipo_usuario)}`),
+      api(cotQuery()), api('/proveedores')
     ]);
     document.getElementById('content').innerHTML = `
       <div class="stat-grid">
