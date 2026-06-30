@@ -21,14 +21,20 @@ app.use(cors());
 app.use(express.json());
 
 // ── CONEXIÓN A POSTGRESQL ─────────────────────────────────────
-// ⚠️  Cambia estos datos según tu instalación de PostgreSQL
-const pool = new Pool({
-  host:     'localhost',
-  port:     5432,
-  database: 'cotiobra_db',   // nombre de tu base de datos
-  user:     'postgres',       // tu usuario de PostgreSQL
-  password: '123456',         // tu contraseña de PostgreSQL
-});
+// Si existe la variable de entorno DATABASE_URL (Render/Neon), se usa esa.
+// Si no existe, usa la configuración local (tu PC con pgAdmin).
+const pool = process.env.DATABASE_URL
+  ? new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: { rejectUnauthorized: false } // requerido por Neon
+    })
+  : new Pool({
+      host:     'localhost',
+      port:     5432,
+      database: 'cotiobra_db',
+      user:     'postgres',
+      password: '18042000',
+    });
 
 // Verificar conexión al iniciar
 pool.connect((err) => {
@@ -426,7 +432,7 @@ app.get('/api/dashboard', async (req, res) => {
 // ============================================================
 //  INICIAR SERVIDOR
 // ============================================================
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Servidor CotiObra corriendo en http://localhost:${PORT}`);
   console.log(`   Rutas disponibles:`);
